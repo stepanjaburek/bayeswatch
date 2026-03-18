@@ -2,7 +2,7 @@
 
 > Watch some nice MCMC animations while your bayesian model samples.
 
-The (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's interactive MCMC demo](https://chi-feng.github.io/mcmc-demo/) in your the RStudio/Positron Viewer pane when your `brms` or `rethinking` model starts sampling and you can kill time with some cool visuals while waiting.
+The (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's interactive MCMC demo](https://github.com/chi-feng/mcmc-demo) in your the RStudio/Positron Viewer pane when your `brms` or `rethinking` model starts sampling and you can kill time with some cool visuals while waiting.
 
 ---
 
