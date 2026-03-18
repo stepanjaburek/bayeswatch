@@ -1,8 +1,8 @@
 # bayeswatch
 
-> Watch your sampler sample.
+> Watch some nice MCMC animations while your bayeisan model samples.
 
-**bayeswatch** opens [Chi Feng's interactive MCMC demo](https://chi-feng.github.io/mcmc-demo/) in the RStudio/Positron Viewer pane the moment your `brms` or `rethinking` model starts sampling — no extra setup, no new syntax to learn.
+The (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's interactive MCMC demo](https://chi-feng.github.io/mcmc-demo/) in your the RStudio/Positron Viewer pane when your `brms` or `rethinking` model starts sampling and you can kill time with some cool visuals while waiting.
 
 ---
 
@@ -12,8 +12,6 @@
 # Install from GitHub:
 remotes::install_github("stepanjaburek/bayeswatch")
 
-# Or from a local clone:
-devtools::install("path/to/bayeswatch")
 ```
 
 ---
@@ -35,7 +33,7 @@ fit <- brm_with_viz(
 )
 ```
 
-### rethinking (McElreath)
+### rethinking 
 
 ```r
 library(bayeswatch)
