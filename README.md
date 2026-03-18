@@ -79,4 +79,6 @@ not a live replay of your actual samples under the hood (but you can pretend the
 
 ## License
 
-Do whatever you want with it
+Do whatever you want with it. 
+
+Probaby don't use it for any important modelling (bc its vibecoded, you know)
