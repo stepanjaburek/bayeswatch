@@ -1,6 +1,6 @@
-# bayeswatch
+# bayeswatch  🏖️
 
-> Watch some nice MCMC animations while your bayeisan model samples.
+> Watch some nice MCMC animations while your bayesian model samples.
 
 The (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's interactive MCMC demo](https://chi-feng.github.io/mcmc-demo/) in your the RStudio/Positron Viewer pane when your `brms` or `rethinking` model starts sampling and you can kill time with some cool visuals while waiting.
 
@@ -50,11 +50,9 @@ m <- ulam_with_viz(
   data = list(y = d$y, x = d$x)
 )
 
-# Older map2stan interface
-m2 <- map2stan_with_viz(flist, data = d)
 ```
 
-The Viewer pane shows:
+The Viewer pane (currently) shows:
 
 - **HMC** — Hamiltonian Monte Carlo, matching what Stan/NUTS actually does
 - **NUTS** — No-U-Turn Sampler (dual averaging)
@@ -67,43 +65,18 @@ Switch between algorithms using the buttons at the top of the viewer. A pulsing 
 
 ## How it works
 
-```
-brm_with_viz(...)
-  │
-  ├─ start_viewer()          # spin up httpuv on localhost:86xx
-  │    └─ rstudioapi::viewer()  # open Viewer pane
-  │
-  ├─ callr::r_bg(brms::brm)  # sampling in background process
-  │    └─ httpuv::service()   # 100ms service loop keeps viewer responsive
-  │
-  └─ mark_done()             # JS status poll → green badge
-```
-
-The local server serves `inst/www/index.html`, which bundles Chi Feng's
-MCMC demo. A `/status` JSON endpoint is polled every 1.5 s by the page
-so the "Done ✓" badge updates automatically.
-
-The animation runs **independently** of your actual chains — it's a
-pedagogical visualisation of how HMC moves through a target distribution,
-not a live replay of your Stan samples.
+Warning! - The animation runs **independently** of your actual chains — it's just a
+pedagogical visualisation of how MCMC moves through a target distribution,
+not a live replay of your actual samples under the hood (but you can pretend they are!).
 
 ---
 
-## Roadmap
-
-- [ ] Live trace plots from actual chain output (cmdstanr `$sample()` supports callbacks)
-- [ ] Chain progress bar via Stan's `refresh` output parsing
-- [ ] Target distribution selector (funnel, donut, banana — matching common Stan pain points)
-- [ ] `shinystan`-style launch after sampling completes
-
----
 
 ## Credits
 
-- [Chi Feng](https://chi-feng.github.io/mcmc-demo/) for the wonderful MCMC visualisation
-- Richard McElreath for `rethinking` and making Bayesian stats accessible
-- The `brms` team
+- [Chi Feng](https://chi-feng.github.io/mcmc-demo/) for the cool MCMC visualisations
+- Richard McElreath for `rethinking` and making me understand Bayesian stats accessible
 
 ## License
 
-MIT
+Do whatever you want with it
