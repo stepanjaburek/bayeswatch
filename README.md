@@ -11,7 +11,7 @@ The (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's in
 ```r
 # Install from GitHub:
 remotes::install_github("stepanjaburek/bayeswatch")
-
+library(bayeswatch)
 ```
 
 ---
@@ -24,33 +24,22 @@ remotes::install_github("stepanjaburek/bayeswatch")
 library(bayeswatch)
 library(brms)
 
-fit <- brm_with_viz(
-  bf(y ~ x + (1 | group)),
-  data   = mydata,
-  family = gaussian(),
-  chains = 4,
-  iter   = 2000
-)
-```
+departments <- c( "Econ", "Bio", "Math",  "PoliSci", "Philosophy")
 
-### rethinking 
-
-```r
-library(bayeswatch)
-library(rethinking)
-
-m <- ulam_with_viz(
-  alist(
-    y      ~ dnorm(mu, sigma),
-    mu     <- a + b * x,
-    a      ~ dnorm(0, 10),
-    b      ~ dnorm(0, 1),
-    sigma  ~ dexp(1)
-  ),
-  data = list(y = d$y, x = d$x)
+df <- data.frame(
+  field = rep(departments, each = 20),
+  beer_consumed  = rep(seq(10, 50, 10), each = 20) + rnorm(100, 0, 2),
+  publications  = rpois(100, lambda = rep(1:5, each = 20))
 )
 
+fit_spurious <- brm_with_viz(publications ~ beer_consumed  , data = df, family = poisson())
+summary(fit_spurious)
+
+fit_controlled <- brm_with_viz(publications ~ beer_consumed + field, data = df, family = poisson())
+summary(fit_controlled)
+
 ```
+
 
 The Viewer pane (currently) shows:
 
