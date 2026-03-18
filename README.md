@@ -76,6 +76,7 @@ not a live replay of your actual samples under the hood (but you can pretend the
 
 - [Chi Feng](https://chi-feng.github.io/mcmc-demo/) for the cool MCMC visualisations
 - Richard McElreath for `rethinking` and making me understand Bayesian stats accessible
+- Claude Code for 95% of building the package
 
 ## License
 
