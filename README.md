@@ -27,19 +27,19 @@ library(brms)
 departments <- c( "Econ", "Bio", "Math",  "PoliSci", "Philosophy")
 
 df <- data.frame(
-  field = rep(departments, each = 20),
+  department = rep(departments, each = 20),
   beer_consumed  = rep(seq(10, 50, 10), each = 20) + rnorm(100, 0, 2),
   publications  = rpois(100, lambda = 5)
 )
 
 fit_spurious <- brm_with_viz(
-  formula = publications ~ beer_consumed + (1 | field), 
+  formula = publications ~ beer_consumed + (1 | department), 
   data = df, 
   family = poisson(),
   prior = c(
     prior(normal(1, 0.5), class = "Intercept"),
     prior(normal(0, 0.2), class = "b", coef = "beer_consumed"),
-    prior(exponential(1), class = "sd", group = "field")
+    prior(exponential(1), class = "sd", group = "department")
   )
 )
 
