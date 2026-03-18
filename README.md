@@ -32,12 +32,18 @@ df <- data.frame(
   publications  = rpois(100, lambda = rep(1:5, each = 20))
 )
 
-fit_spurious <- brm_with_viz(publications ~ beer_consumed  , data = df, family = poisson())
+fit_spurious <- brm_with_viz(
+  formula = publications ~ beer_consumed + (1 | field), 
+  data = df, 
+  family = poisson(),
+  prior = c(
+    prior(normal(1, 0.5), class = "Intercept"),
+    prior(normal(0, 0.2), class = "b", coef = "beer_consumed"),
+    prior(exponential(1), class = "sd", group = "field")
+  )
+)
+
 summary(fit_spurious)
-
-fit_controlled <- brm_with_viz(publications ~ beer_consumed + field, data = df, family = poisson())
-summary(fit_controlled)
-
 ```
 
 
