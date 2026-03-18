@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>bayeswatch</title>
+
+<!-- Chi Feng's libs — served locally, no external requests -->
+<script src="lib/dat.gui.min.js"></script>
+<script src="lib/conrec.min.js"></script>
+<script src="lib/canvas-5-polyfill.js"></script>
+<script src="lib/linalg.core.js"></script>
+<script src="lib/linalg.opt.js"></script>
+<script src="lib/seedrandom.min.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #ffffff;
+    color: #1a202c;
+    height: 100vh;   /* Visualizer.resize() reads document.body.clientHeight */
+    overflow: hidden;
+  }
+
+  /* top bar floats over the canvas */
+  #topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.93);
+    border-bottom: 1px solid #e2e8f0;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bar-left { display: flex; align-items: center; gap: 9px; }
+
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d97706;
+    animation: blink 1.3s ease-in-out infinite;
+  }
+  .dot.done { background: #16a34a; animation: none; }
+
+  @keyframes blink {
+    0%,100% { opacity:1; } 50% { opacity:.35; }
+  }
+
+  .title { font-size: 13px; font-weight: 600; letter-spacing: .02em; color: #374151; }
+
+  .badge {
+    font-size: 11px; padding: 2px 9px; border-radius: 10px;
+    background: #fef3c7; color: #d97706; font-weight: 500;
+    transition: background .3s, color .3s;
+  }
+  .badge.done { background: #dcfce7; color: #16a34a; }
+
+  /* algo buttons */
+  .algos { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  .algo-btn {
+    font-size: 11px; padding: 3px 9px; border-radius: 5px;
+    border: 1px solid #cbd5e1; background: transparent;
+    color: #94a3b8; cursor: pointer; transition: all .12s;
+  }
+  .algo-btn:hover  { border-color: #94a3b8; color: #475569; }
+  .algo-btn.active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+
+  /* bottom info bar */
+  #infobar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 5px 14px;
+    background: rgba(255, 255, 255, 0.93);
+    border-top: 1px solid #e2e8f0;
+    font-size: 11px;
+    color: #94a3b8;
+    display: flex; gap: 18px;
+  }
+  #infobar strong { color: #64748b; }
+
+  /* Let Visualizer.js handle canvas sizing entirely — no CSS conflicts */
+  canvas { display: block; }
+
+  /* Hide dat.GUI — too cluttered in viewer pane; sim/viz globals still usable */
+  .dg.ac { display: none !important; }
+</style>
+</head>
+<body>
+
+<!--
+  Simulation.js's setAlgorithm() writes to #info.
+  It must exist in the DOM or the call throws a TypeError and the animation never starts.
+-->
+<div id="info" style="display:none"></div>
+
+<div id="topbar">
+  <div class="bar-left">
+    <div class="dot" id="dot"></div>
+    <span class="title">bayeswatch</span>
+    <span class="badge" id="badge">Sampling&#x2026;</span>
+  </div>
+  <div class="algos" id="algos">
+    <button class="algo-btn active" data-algo="HamiltonianMC">HMC</button>
+    <button class="algo-btn"        data-algo="DualAveragingNUTS">NUTS</button>
+    <button class="algo-btn"        data-algo="GibbsSampling">Gibbs</button>
+    <button class="algo-btn"        data-algo="RandomWalkMH">RWMH</button>
+  </div>
+</div>
+
+<!--
+  Visualizer.js sizes this canvas itself (canvas.width = body.clientWidth * dpr,
+  canvas.style.zoom = 1/dpr).  Do NOT resize it from JS or CSS — that clears pixels
+  and breaks the internal coordinate system.
+-->
+<canvas id="plotCanvas"></canvas>
+
+<div id="infobar">
+  <span>Algorithm: <strong id="algo-label">Hamiltonian MC</strong></span>
+  <span>Target: <strong id="target-label">Banana</strong></span>
+  <span style="margin-left:auto;opacity:.6">chi-feng/mcmc-demo (bundled)</span>
+</div>
+
+<!-- Chi Feng's simulation engine -->
+<!-- Simulation.js registers window.onload which creates viz + sim globals and starts animate() -->
+<script src="main/MultivariateNormal.js"></script>
+<script src="main/MCMC.js"></script>
+<script src="main/Simulation.js"></script>
+<script src="main/Visualizer.js"></script>
+<script src="algorithms/HamiltonianMC.js"></script>
+<script src="algorithms/RandomWalkMH.js"></script>
+<script src="algorithms/DE-MCMC-Z.js"></script>
+<script src="algorithms/AdaptiveMH.js"></script>
+<script src="algorithms/MALA.js"></script>
+<script src="algorithms/NaiveNUTS.js"></script>
+<script src="algorithms/EfficientNUTS.js"></script>
+<script src="algorithms/DualAveragingHMC.js"></script>
+<script src="algorithms/DualAveragingNUTS.js"></script>
+<script src="algorithms/H2MC.js"></script>
+<script src="algorithms/GibbsSampling.js"></script>
+<script src="algorithms/SVGD.js"></script>
+<script src="algorithms/NSRadFriends.js"></script>
+
+<script>
+var ALGO_LABELS = {
+  HamiltonianMC:     'Hamiltonian MC',
+  DualAveragingNUTS: 'NUTS (dual averaging)',
+  GibbsSampling:     'Gibbs Sampling',
+  RandomWalkMH:      'Random Walk MH'
+};
+
+// Algorithm button clicks.
+// sim is a global set by Simulation.js's window.onload, which fires BEFORE our
+// addEventListener('load') callback, so sim is always defined by the time any
+// button is clicked.
+document.getElementById('algos').addEventListener('click', function(e) {
+  var btn = e.target;
+  if (!btn.classList.contains('algo-btn')) return;
+  document.querySelectorAll('.algo-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  var algo = btn.getAttribute('data-algo');
+  document.getElementById('algo-label').textContent = ALGO_LABELS[algo] || algo;
+  if (typeof sim !== 'undefined') sim.setAlgorithm(algo);
+});
+
+function pollStatus() {
+  fetch('/status')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var dot   = document.getElementById('dot');
+      var badge = document.getElementById('badge');
+      if (data.done) {
+        dot.className   = 'dot done';
+        badge.className = 'badge done';
+        badge.textContent = 'Done \u2713';
+      } else {
+        badge.textContent = data.message || 'Sampling\u2026';
+        setTimeout(pollStatus, 1500);
+      }
+    })
+    .catch(function() { setTimeout(pollStatus, 3000); });
+}
+
+// Simulation.js's window.onload fires first and fully initialises viz + sim.
+// We only need to start our status polling here.
+window.addEventListener('load', function() {
+  pollStatus();
+  // Reflect actual starting target chosen by Simulation.js
+  if (typeof sim !== 'undefined' && sim.target) {
+    var t = sim.target;
+    document.getElementById('target-label').textContent =
+      t.charAt(0).toUpperCase() + t.slice(1);
+  }
+});
+</script>
+</body>
+</html>
