@@ -18,6 +18,41 @@ library(bayeswatch)
 
 ## Usage
 
+
+### rethinking
+
+```r
+departments <- c("PoliSci", "Bio", "Math", "CS","Econ")
+
+df <- data.frame(
+  department = rep(departments, each = 50),
+  beer_consumed  = rep(seq(50, 10, -10), each = 50) + rnorm(250, 0, 2),
+  publications  = rpois(250,lambda = rep(5:1, each = 50))
+)
+
+d <- list(
+    publications = as.integer(df$publications),
+    beer_consumed = as.numeric(df$beer_consumed),
+    department = as.integer(as.factor(df$department))
+)
+
+
+m.1 <- ulam_bayeswatch(
+    alist(
+        publications ~ dpois(lambda),
+        log(lambda) <- a + beta_beer * beer_consumed + beta[department],
+        a ~ dnorm(0, 1),
+        beta_beer ~ dnorm(0, 1),
+        beta[department] ~ dnorm(0, 1)
+    ), data=d, chains=4
+)
+precis(m.1, depth=2)
+plot(m.1)
+trankplot(m.1)
+traceplot(m.1)
+```
+
+
 ### brms
 
 ```r
@@ -45,7 +80,6 @@ fit_spurious <- brm_with_viz(
 
 summary(fit_spurious)
 ```
-
 
 The Viewer pane (currently) shows:
 
