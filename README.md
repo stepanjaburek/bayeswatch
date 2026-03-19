@@ -16,6 +16,14 @@ library(bayeswatch)
 
 ---
 
+## How it works
+
+Warning! - The animation runs **independently** of your actual chains — it's just a
+pedagogical visualisation of how MCMC moves samples a target distribution, **it is not**
+not a live replay of your actual samples under the hood. But you can pretend they are!
+
+---
+
 ## Usage
 
 Just add **_bayeswatch** after the ulam or brm function and you're good! See below for a use case in `rethinking` and `brms`.
@@ -98,13 +106,6 @@ You can switch between algorithms using the buttons at the top of the viewer. Or
 
 ---
 
-## How it works
-
-Warning! - The animation runs **independently** of your actual chains — it's just a
-pedagogical visualisation of how MCMC moves samples a target distribution, **it is not**
-not a live replay of your actual samples under the hood. But you can pretend they are!
-
----
 
 
 ## Credits
