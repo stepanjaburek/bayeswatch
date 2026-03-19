@@ -69,17 +69,22 @@ brm_with_viz <- function(..., .port = find_free_port()) {
 #' ## The CSV-not-found problem
 #'
 #' When \code{cmdstan=TRUE} (the default since rethinking >= 2.21), ulam uses
-#' CmdStanR and writes CSV output into the *child* process's \code{tempdir()}.
-#' That directory is deleted when the child exits, so \code{read_cmdstan_csv()}
-#' fails in the parent with "File does not exist".
+#' CmdStanR and stores the \code{CmdStanMCMC} R6 object as an R *attribute*
+#' on the S4 fit: \code{attr(fit, "cstanfit")}.  It writes CSV output into the
+#' *child* process's \code{tempdir()}, which is deleted when the child exits,
+#' so \code{read_cmdstan_csv()} fails in the parent with "File does not exist".
 #'
 #' ## The fix
 #'
-#' The child calls \code{$save_output_files()} on the raw \code{CmdStanMCMC}
-#' R6 object before returning.  We locate that object by walking every S4 slot
-#' of the returned fit looking for an R6 object that has
-#' \code{save_output_files} as a method — robust against the slot name
-#' changing between rethinking versions.
+#' Before returning, the child calls
+#' \code{attr(fit, "cstanfit")$save_output_files(output_dir)} to copy every
+#' CSV to a persistent directory created by the parent, and updates the path
+#' references inside the \code{CmdStanMCMC} object so the parent session can
+#' call \code{precis()}, \code{plot()}, etc. without errors.
+#'
+#' For robustness we also check \code{attr(fit, "stanfit")} (legacy RStan path)
+#' and fall back to scanning all attributes for any R6 object that has a
+#' \code{save_output_files} method.
 #'
 #' @param flist Model formula list.
 #' @param ... Passed to [rethinking::ulam()] / [rethinking::map2stan()].
@@ -109,20 +114,21 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
       rethinking_fn <- getExportedValue("rethinking", fn_name)
       fit <- do.call(rethinking_fn, c(list(flist), args))
 
-      # Locate the CmdStanMCMC R6 object hidden inside the S4 fit.
-      # We search every slot rather than hard-coding a slot name, because
-      # the internal storage changed between rethinking versions:
-      #   - older builds put it in @stanfit
-      #   - current cmdstan=TRUE builds use a different slot
-      # We identify it as the first slot whose value is an R6 object with a
-      # save_output_files() method.
-      cmdstan_fit <- NULL
-      for (sn in methods::slotNames(fit)) {
-        obj <- tryCatch(methods::slot(fit, sn), error = function(e) NULL)
-        if (is.environment(obj) &&
-            is.function(obj[["save_output_files"]])) {
-          cmdstan_fit <- obj
-          break
+      # The CmdStanMCMC R6 object is stored as attr(fit, "cstanfit") in
+      # current rethinking (cmdstan=TRUE path).  The legacy RStan path uses
+      # attr(fit, "stanfit"), which does not need CSV relocation.
+      # We try the known attribute names first, then scan all attributes as a
+      # fallback so this keeps working if the internals change again.
+      cmdstan_fit <- attr(fit, "cstanfit")
+
+      if (is.null(cmdstan_fit)) {
+        # Fallback: scan all attributes for an R6 object with the method
+        for (aname in names(attributes(fit))) {
+          obj <- attr(fit, aname)
+          if (is.environment(obj) && is.function(obj[["save_output_files"]])) {
+            cmdstan_fit <- obj
+            break
+          }
         }
       }
 
