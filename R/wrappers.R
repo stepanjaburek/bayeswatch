@@ -12,14 +12,10 @@ run_with_viz <- function(fn, fn_args, .port = find_free_port()) {
     package   = FALSE,
     libpath   = .libPaths(),
     supervise = TRUE,
-    stdout    = NULL,   # let child stdout go directly to console
-    stderr    = NULL    # let child stderr go directly to console
+    stdout    = NULL,
+    stderr    = NULL
   )
 
-  # Service httpuv in 100ms slices so the Viewer pane can load the page and
-  # poll /status while the background sampler is running.  bg$wait() with
-  # timeoutMs=0 returns before libuv dispatches HTTP callbacks, leaving the
-  # viewer blank; using service(100) fixes that.
   tryCatch({
     while (bg$is_alive()) {
       httpuv::service(timeoutMs = 100)
@@ -70,23 +66,25 @@ brm_with_viz <- function(..., .port = find_free_port()) {
 #' Drop-in for [rethinking::ulam()] or [rethinking::map2stan()]. Opens Chi
 #' Feng's MCMC animation in the Viewer pane while sampling runs in background.
 #'
-#' The root cause of CSV-not-found errors is that \code{ulam()} uses CmdStanR
-#' internally, which writes its CSV files to a path derived from
-#' \code{tempdir()} in the *child* process.  That temp directory is different
-#' from the parent's \code{tempdir()}, so \code{read_cmdstan_csv()} cannot
-#' find the files afterwards.  We work around this by:
+#' ## Why the plain background-process approach breaks
 #'
-#' \enumerate{
-#'   \item Creating a **persistent** output directory in the parent process
-#'         (inside \code{tools::R_user_dir("bayeswatch", "cache")}).
-#'   \item Passing it to \code{ulam()} via \code{cmdstan_args$output_dir}.
-#'   \item After the child returns, calling \code{cmdstanr::read_cmdstan_csv()}
-#'         on the files that now live in the shared directory so the returned
-#'         model object is fully usable in the parent.
-#' \end{enumerate}
+#' \code{ulam()} uses CmdStanR internally. CmdStanR writes CSV output files to
+#' a path inside the *child* process's \code{tempdir()}.  When the child exits
+#' that directory is cleaned up, so the parent's \code{read_cmdstan_csv()} call
+#' fails with "File does not exist".
+#'
+#' ## The fix
+#'
+#' Before returning, the child calls \code{fit@@stanfit$save_output_files(dir)}
+#' where \code{dir} is a persistent cache directory created by the parent
+#' *before* launching the child.  This copies every CSV to the shared directory
+#' and — crucially — updates the internal path references inside the
+#' \code{CmdStanMCMC} object so the parent's \code{read_cmdstan_csv()} finds
+#' the files correctly.  No changes to \code{ulam()}'s own argument list are
+#' needed.
 #'
 #' @param flist Model formula list.
-#' @param ... Passed to the rethinking function.
+#' @param ... Passed to [rethinking::ulam()] / [rethinking::map2stan()].
 #' @param .fn \code{"ulam"} (default) or \code{"map2stan"}.
 #' @param .port Port for the local viewer server (auto-detected).
 #' @return The fitted model object (a \code{ulam} / \code{map2stan} fit).
@@ -100,32 +98,42 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
 
   fn_name <- match.arg(.fn)
 
-  # Create a stable output directory that is visible to both processes.
-  # tools::R_user_dir() is available in R >= 4.0 and survives across sessions.
+  # Create a persistent output directory visible to both the parent and child
+  # process (a real filesystem path, not a session-scoped tempdir()).
   output_dir <- file.path(
     tools::R_user_dir("bayeswatch", which = "cache"),
     paste0("ulam_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", Sys.getpid())
   )
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Merge our output_dir into whatever cmdstan_args the caller supplied.
-  dots <- list(...)
-  cmdstan_args <- dots[["cmdstan_args"]]
-  if (is.null(cmdstan_args)) cmdstan_args <- list()
-  cmdstan_args[["output_dir"]] <- output_dir
-
-  # Rebuild the dots list with the updated cmdstan_args.
-  dots[["cmdstan_args"]] <- cmdstan_args
-
   run_with_viz(
-    fn = function(fn_name, flist, args) {
+    fn = function(fn_name, flist, args, output_dir) {
       rethinking_fn <- getExportedValue("rethinking", fn_name)
-      do.call(rethinking_fn, c(list(flist), args))
+      fit <- do.call(rethinking_fn, c(list(flist), args))
+
+      # Move CmdStan CSV files to the shared persistent directory and update
+      # the path references inside the fit object before it is serialised and
+      # sent back to the parent.  Without this the parent cannot call
+      # read_cmdstan_csv() because the child's tempdir() is deleted on exit.
+      #
+      # ulam stores the raw CmdStanMCMC object in fit@stanfit.
+      if (methods::is(fit, "ulam") && !is.null(fit@stanfit)) {
+        tryCatch(
+          fit@stanfit$save_output_files(dir = output_dir, overwrite = TRUE),
+          error = function(e) {
+            warning("[bayeswatch] Could not relocate CmdStan CSV files: ",
+                    conditionMessage(e))
+          }
+        )
+      }
+
+      fit
     },
     fn_args = list(
-      fn_name = fn_name,
-      flist   = flist,
-      args    = dots
+      fn_name    = fn_name,
+      flist      = flist,
+      args       = list(...),
+      output_dir = output_dir
     ),
     .port = .port
   )
