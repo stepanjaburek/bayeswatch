@@ -107,7 +107,7 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
 
     # Move CSVs from child tempdir() to the shared output_dir.
     # Raises an error (propagated to parent via callr) if this fails.
-    cmdstan_fit$save_output_files(dir = output_dir, overwrite = TRUE)
+    cmdstan_fit$save_output_files(dir = output_dir)
 
     # Strip the R6 before the callr serialisation round-trip: R6 environments
     # lose all methods through saveRDS/readRDS.  Parent rebuilds from CSVs.
