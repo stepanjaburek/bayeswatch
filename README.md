@@ -59,15 +59,15 @@ traceplot(m.1)
 library(bayeswatch)
 library(brms)
 
-departments <- c( "Econ", "Bio", "Math",  "PoliSci", "Philosophy")
+departments <- c("PoliSci", "Bio", "Math", "CS","Econ")
 
 df <- data.frame(
-  department = rep(departments, each = 20),
-  beer_consumed  = rep(seq(10, 50, 10), each = 20) + rnorm(100, 0, 2),
-  publications  = rpois(100, lambda = 5)
+  department = rep(departments, each = 50),
+  beer_consumed  = rep(seq(50, 10, -10), each = 50) + rnorm(250, 0, 2),
+  publications  = rpois(250,lambda = rep(5:1, each = 50))
 )
 
-fit_spurious <- brm_with_viz(
+m.1 <- brm_bayeswatch(
   formula = publications ~ beer_consumed + (1 | department), 
   data = df, 
   family = poisson(),
@@ -78,7 +78,7 @@ fit_spurious <- brm_with_viz(
   )
 )
 
-summary(fit_spurious)
+summary(m.1)
 ```
 
 The Viewer pane (currently) shows:
