@@ -2,7 +2,7 @@
 
 > Watch some nice MCMC animations while your bayesian model samples.
 
-The (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's interactive MCMC demo](https://github.com/chi-feng/mcmc-demo) in your the RStudio/Positron Viewer pane when your `brms` or `rethinking` model starts sampling and you can kill time with some cool visuals while waiting.
+This (mostly vibecoded) R package **bayeswatch** opens the amazing [Chi Feng's interactive MCMC demo](https://github.com/chi-feng/mcmc-demo) in your the RStudio/Positron viewer pane when your `brms` or `rethinking` model starts running, so you can kill time with some cool visuals while waiting for it to sample.
 
 ---
 
@@ -22,6 +22,9 @@ library(bayeswatch)
 ### rethinking
 
 ```r
+library(rethinking)
+library(bayeswatch)
+
 departments <- c("PoliSci", "Bio", "Math", "CS","Econ")
 
 df <- data.frame(
@@ -56,8 +59,8 @@ traceplot(m.1)
 ### brms
 
 ```r
-library(bayeswatch)
 library(brms)
+library(bayeswatch)
 
 departments <- c("PoliSci", "Bio", "Math", "CS","Econ")
 
@@ -79,24 +82,25 @@ m.1 <- brm_bayeswatch(
 )
 
 summary(m.1)
+plot(m.1)
 ```
 
 The Viewer pane (currently) shows:
 
-- **HMC** — Hamiltonian Monte Carlo, matching what Stan/NUTS actually does
+- **HMC** — Hamiltonian Monte Carlo
 - **NUTS** — No-U-Turn Sampler (dual averaging)
-- **Gibbs** — Gibbs Sampling for comparison
-- **RWMH** — Random Walk Metropolis-Hastings for comparison
+- **Gibbs** — Gibbs Sampler
+- **RWMH** — Random Walk Metropolis-Hastings
 
-Switch between algorithms using the buttons at the top of the viewer. A pulsing amber dot shows sampling is in progress; it turns green when done.
+Switch between algorithms using the buttons at the top of the viewer. Orange dot shows sampling is in progress; it turns green when done.
 
 ---
 
 ## How it works
 
 Warning! - The animation runs **independently** of your actual chains — it's just a
-pedagogical visualisation of how MCMC moves through a target distribution,
-not a live replay of your actual samples under the hood (but you can pretend they are!).
+pedagogical visualisation of how MCMC moves samples a target distribution, **it is not**
+not a live replay of your actual samples under the hood. But you can pretend they are!
 
 ---
 
@@ -104,11 +108,11 @@ not a live replay of your actual samples under the hood (but you can pretend the
 ## Credits
 
 - [Chi Feng](https://chi-feng.github.io/mcmc-demo/) for the cool MCMC visualisations
-- Richard McElreath for `rethinking` and making me understand Bayesian stats accessible
-- Claude Code for 95% of building the package
+- Richard McElreath for `rethinking` and making me understand Bayesian stats better
+- Claude Code for building around 95% of the package
 
 ## License
 
-Do whatever you want with it. 
+MIT - do whatever you want with it. 
 
-Probaby don't use it for any important modelling (bc its vibecoded, you know)
+But probaby don't use it for any important modelling (because its vibecoded, you know)
