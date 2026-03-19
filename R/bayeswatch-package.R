@@ -1,4 +1,4 @@
-#' bayeswatch: HMC Animation Viewer for Stan Models
+#' bayeswatch: MCMC Animation Viewer for Stan Models
 #'
 #' Wraps `brms::brm()` and `rethinking::ulam()` / `map2stan()` to open
 #' Chi Feng's interactive MCMC demo in the RStudio Viewer pane while
@@ -6,10 +6,10 @@
 #'
 #' ## Main functions
 #'
-#' - [brm_with_viz()]       — drop-in for `brms::brm()`
-#' - [ulam_with_viz()]      — drop-in for `rethinking::ulam()`
-#' - [map2stan_with_viz()]  — drop-in for `rethinking::map2stan()`
-#' - [close_viz()]          — manually stop the viewer server
+#' - [brm_bayeswatch()]       — drop-in for `brms::brm()`
+#' - [ulam_bayeswatch()]      — drop-in for `rethinking::ulam()`
+#' - [map2stan_bayeswatch()]  — drop-in for `rethinking::map2stan()`
+#' - [close_bayeswatch()]          — manually stop the viewer server
 #'
 #' @keywords internal
 "_PACKAGE"
