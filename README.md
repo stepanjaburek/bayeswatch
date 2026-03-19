@@ -87,14 +87,14 @@ summary(m.1)
 plot(m.1)
 ```
 
-The Viewer pane (currently) shows:
+The Viewer pane (currently) shows a banana distribution sampled by:
 
 - **HMC** — Hamiltonian Monte Carlo
 - **NUTS** — No-U-Turn Sampler; dual averaging from Hoffman and Gelman (2014) 
 - **Gibbs** — Gibbs Sampler
 - **RWMH** — Random Walk Metropolis-Hastings a.k.a the Rosenbluth Algorithm
 
-Switch between algorithms using the buttons at the top of the viewer. Orange dot shows sampling is in progress; it turns green when done.
+You can switch between algorithms using the buttons at the top of the viewer. Orange dot shows sampling is in progress; it turns green when done.
 
 ---
 
