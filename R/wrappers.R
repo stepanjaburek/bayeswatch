@@ -66,28 +66,26 @@ brm_with_viz <- function(..., .port = find_free_port()) {
 #' Drop-in for [rethinking::ulam()] or [rethinking::map2stan()]. Opens Chi
 #' Feng's MCMC animation in the Viewer pane while sampling runs in background.
 #'
-#' ## Why the plain background-process approach breaks
+#' ## The CSV-not-found problem
 #'
-#' \code{ulam()} uses CmdStanR internally. CmdStanR writes CSV output files to
-#' a path inside the *child* process's \code{tempdir()}.  When the child exits
-#' that directory is cleaned up, so the parent's \code{read_cmdstan_csv()} call
-#' fails with "File does not exist".
+#' When \code{cmdstan=TRUE} (the default since rethinking >= 2.21), ulam uses
+#' CmdStanR and writes CSV output into the *child* process's \code{tempdir()}.
+#' That directory is deleted when the child exits, so \code{read_cmdstan_csv()}
+#' fails in the parent with "File does not exist".
 #'
 #' ## The fix
 #'
-#' Before returning, the child calls \code{fit@@stanfit$save_output_files(dir)}
-#' where \code{dir} is a persistent cache directory created by the parent
-#' *before* launching the child.  This copies every CSV to the shared directory
-#' and — crucially — updates the internal path references inside the
-#' \code{CmdStanMCMC} object so the parent's \code{read_cmdstan_csv()} finds
-#' the files correctly.  No changes to \code{ulam()}'s own argument list are
-#' needed.
+#' The child calls \code{$save_output_files()} on the raw \code{CmdStanMCMC}
+#' R6 object before returning.  We locate that object by walking every S4 slot
+#' of the returned fit looking for an R6 object that has
+#' \code{save_output_files} as a method — robust against the slot name
+#' changing between rethinking versions.
 #'
 #' @param flist Model formula list.
 #' @param ... Passed to [rethinking::ulam()] / [rethinking::map2stan()].
 #' @param .fn \code{"ulam"} (default) or \code{"map2stan"}.
 #' @param .port Port for the local viewer server (auto-detected).
-#' @return The fitted model object (a \code{ulam} / \code{map2stan} fit).
+#' @return The fitted model object.
 #' @export
 ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
                           .port = find_free_port()) {
@@ -98,8 +96,7 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
 
   fn_name <- match.arg(.fn)
 
-  # Create a persistent output directory visible to both the parent and child
-  # process (a real filesystem path, not a session-scoped tempdir()).
+  # Persistent directory visible to both parent and child (not a tempdir()).
   output_dir <- file.path(
     tools::R_user_dir("bayeswatch", which = "cache"),
     paste0("ulam_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", Sys.getpid())
@@ -108,18 +105,30 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
 
   run_with_viz(
     fn = function(fn_name, flist, args, output_dir) {
+
       rethinking_fn <- getExportedValue("rethinking", fn_name)
       fit <- do.call(rethinking_fn, c(list(flist), args))
 
-      # Move CmdStan CSV files to the shared persistent directory and update
-      # the path references inside the fit object before it is serialised and
-      # sent back to the parent.  Without this the parent cannot call
-      # read_cmdstan_csv() because the child's tempdir() is deleted on exit.
-      #
-      # ulam stores the raw CmdStanMCMC object in fit@stanfit.
-      if (methods::is(fit, "ulam") && !is.null(fit@stanfit)) {
+      # Locate the CmdStanMCMC R6 object hidden inside the S4 fit.
+      # We search every slot rather than hard-coding a slot name, because
+      # the internal storage changed between rethinking versions:
+      #   - older builds put it in @stanfit
+      #   - current cmdstan=TRUE builds use a different slot
+      # We identify it as the first slot whose value is an R6 object with a
+      # save_output_files() method.
+      cmdstan_fit <- NULL
+      for (sn in methods::slotNames(fit)) {
+        obj <- tryCatch(methods::slot(fit, sn), error = function(e) NULL)
+        if (is.environment(obj) &&
+            is.function(obj[["save_output_files"]])) {
+          cmdstan_fit <- obj
+          break
+        }
+      }
+
+      if (!is.null(cmdstan_fit)) {
         tryCatch(
-          fit@stanfit$save_output_files(dir = output_dir, overwrite = TRUE),
+          cmdstan_fit$save_output_files(dir = output_dir, overwrite = TRUE),
           error = function(e) {
             warning("[bayeswatch] Could not relocate CmdStan CSV files: ",
                     conditionMessage(e))
