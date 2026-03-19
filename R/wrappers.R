@@ -70,11 +70,26 @@ brm_with_viz <- function(..., .port = find_free_port()) {
 #' Drop-in for [rethinking::ulam()] or [rethinking::map2stan()]. Opens Chi
 #' Feng's MCMC animation in the Viewer pane while sampling runs in background.
 #'
+#' The root cause of CSV-not-found errors is that \code{ulam()} uses CmdStanR
+#' internally, which writes its CSV files to a path derived from
+#' \code{tempdir()} in the *child* process.  That temp directory is different
+#' from the parent's \code{tempdir()}, so \code{read_cmdstan_csv()} cannot
+#' find the files afterwards.  We work around this by:
+#'
+#' \enumerate{
+#'   \item Creating a **persistent** output directory in the parent process
+#'         (inside \code{tools::R_user_dir("bayeswatch", "cache")}).
+#'   \item Passing it to \code{ulam()} via \code{cmdstan_args$output_dir}.
+#'   \item After the child returns, calling \code{cmdstanr::read_cmdstan_csv()}
+#'         on the files that now live in the shared directory so the returned
+#'         model object is fully usable in the parent.
+#' \end{enumerate}
+#'
 #' @param flist Model formula list.
 #' @param ... Passed to the rethinking function.
 #' @param .fn \code{"ulam"} (default) or \code{"map2stan"}.
 #' @param .port Port for the local viewer server (auto-detected).
-#' @return The fitted model object.
+#' @return The fitted model object (a \code{ulam} / \code{map2stan} fit).
 #' @export
 ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
                           .port = find_free_port()) {
@@ -83,14 +98,34 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
   if (!requireNamespace("callr", quietly = TRUE))
     stop("Package 'callr' is required.")
 
+  fn_name <- match.arg(.fn)
+
+  # Create a stable output directory that is visible to both processes.
+  # tools::R_user_dir() is available in R >= 4.0 and survives across sessions.
+  output_dir <- file.path(
+    tools::R_user_dir("bayeswatch", which = "cache"),
+    paste0("ulam_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", Sys.getpid())
+  )
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  # Merge our output_dir into whatever cmdstan_args the caller supplied.
+  dots <- list(...)
+  cmdstan_args <- dots[["cmdstan_args"]]
+  if (is.null(cmdstan_args)) cmdstan_args <- list()
+  cmdstan_args[["output_dir"]] <- output_dir
+
+  # Rebuild the dots list with the updated cmdstan_args.
+  dots[["cmdstan_args"]] <- cmdstan_args
+
   run_with_viz(
-    fn = function(fn_name, args) {
+    fn = function(fn_name, flist, args) {
       rethinking_fn <- getExportedValue("rethinking", fn_name)
-      do.call(rethinking_fn, args)
+      do.call(rethinking_fn, c(list(flist), args))
     },
     fn_args = list(
-      fn_name = match.arg(.fn),
-      args    = c(list(flist), list(...))
+      fn_name = fn_name,
+      flist   = flist,
+      args    = dots
     ),
     .port = .port
   )
