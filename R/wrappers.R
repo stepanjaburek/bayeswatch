@@ -72,7 +72,7 @@ run_with_viz <- function(fn, fn_args, .port = find_free_port()) {
 #' @param .port Port for the local viewer server (auto-detected).
 #' @return A \code{brmsfit} object.
 #' @export
-brm_with_viz <- function(..., .port = find_free_port()) {
+brm_bayeswatch <- function(..., .port = find_free_port()) {
   if (!requireNamespace("brms",  quietly = TRUE)) stop("Package 'brms' is required.")
   if (!requireNamespace("callr", quietly = TRUE)) stop("Package 'callr' is required.")
   run_with_viz(
@@ -91,7 +91,7 @@ brm_with_viz <- function(..., .port = find_free_port()) {
 #' @param .port Port for the local viewer server (auto-detected).
 #' @return The fitted model object.
 #' @export
-ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
+ulam_bayeswatch <- function(flist, ..., .fn = c("ulam", "map2stan"),
                           .port = find_free_port()) {
   if (!requireNamespace("rethinking", quietly = TRUE)) stop("Package 'rethinking' is required.")
   if (!requireNamespace("callr",      quietly = TRUE)) stop("Package 'callr' is required.")
@@ -172,13 +172,13 @@ ulam_with_viz <- function(flist, ..., .fn = c("ulam", "map2stan"),
 }
 
 
-#' @inheritParams ulam_with_viz
+#' @inheritParams ulam_bayeswatch
 #' @export
-map2stan_with_viz <- function(flist, ..., .port = find_free_port()) {
-  ulam_with_viz(flist, ..., .fn = "map2stan", .port = .port)
+map2stan_bayeswatch <- function(flist, ..., .port = find_free_port()) {
+  ulam_bayeswatch(flist, ..., .fn = "map2stan", .port = .port)
 }
 
 
 #' Stop the HMC viewer server
 #' @export
-close_viz <- function() stop_viewer()
+close_bayeswatch <- function() stop_viewer()
