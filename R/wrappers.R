@@ -6,24 +6,52 @@ run_with_viz <- function(fn, fn_args, .port = find_free_port()) {
   start_viewer(.port)
   message("[bayeswatch] Sampling in background \u2014 watch the Viewer pane!")
 
+  # Capture child stdout+stderr to temp files and tail them into the parent
+  # console while the httpuv event loop is running.
+  # (r_bg with stdout="|" would require bg$read_output() polling which blocks;
+  #  NULL discards; a file lets us tail non-blockingly alongside httpuv.)
+  stdout_file <- tempfile("bayeswatch_out_")
+  stderr_file <- tempfile("bayeswatch_err_")
+  file.create(stdout_file)
+  file.create(stderr_file)
+
   bg <- callr::r_bg(
     func      = fn,
     args      = fn_args,
     package   = FALSE,
     libpath   = .libPaths(),
     supervise = TRUE,
-    stdout    = NULL,
-    stderr    = NULL
+    stdout    = stdout_file,
+    stderr    = stderr_file
   )
+
+  stdout_pos <- 0L
+  stderr_pos <- 0L
+
+  flush_child_output <- function() {
+    out <- readLines(stdout_file, warn = FALSE)
+    if (length(out) > stdout_pos) {
+      message(paste(out[seq(stdout_pos + 1L, length(out))], collapse = "\n"))
+      stdout_pos <<- length(out)
+    }
+    err <- readLines(stderr_file, warn = FALSE)
+    if (length(err) > stderr_pos) {
+      message(paste(err[seq(stderr_pos + 1L, length(err))], collapse = "\n"))
+      stderr_pos <<- length(err)
+    }
+  }
 
   tryCatch({
     while (bg$is_alive()) {
       httpuv::service(timeoutMs = 100)
+      flush_child_output()
     }
   }, interrupt = function(e) {
     message("\n[bayeswatch] Interrupted \u2014 killing background sampler.")
     bg$kill()
   })
+
+  flush_child_output()   # drain any final lines after process exits
 
   for (i in seq_len(15)) httpuv::service(timeoutMs = 100)
   mark_done()
