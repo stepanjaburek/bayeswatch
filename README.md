@@ -18,6 +18,8 @@ library(bayeswatch)
 
 ## Usage
 
+Just add **_bayeswatch** after the ulam or brm function and you're good! See below for a use case in `rethinking` and `brms`.
+
 
 ### rethinking
 
@@ -88,9 +90,9 @@ plot(m.1)
 The Viewer pane (currently) shows:
 
 - **HMC** — Hamiltonian Monte Carlo
-- **NUTS** — No-U-Turn Sampler (dual averaging)
+- **NUTS** — No-U-Turn Sampler; dual averaging from Hoffman and Gelman (2014) 
 - **Gibbs** — Gibbs Sampler
-- **RWMH** — Random Walk Metropolis-Hastings
+- **RWMH** — Random Walk Metropolis-Hastings a.k.a the Rosenbluth Algorithm
 
 Switch between algorithms using the buttons at the top of the viewer. Orange dot shows sampling is in progress; it turns green when done.
 
@@ -107,8 +109,8 @@ not a live replay of your actual samples under the hood. But you can pretend the
 
 ## Credits
 
-- [Chi Feng](https://chi-feng.github.io/mcmc-demo/) for the cool MCMC visualisations
-- Richard McElreath for `rethinking` and making me understand Bayesian stats better
+- [Chi Feng](https://chi-feng.github.io/mcmc-demo/) for the MCMC visualisations
+- Richard McElreath for `rethinking` and making me understand Bayesian stats a bit better
 - Claude Code for building around 95% of the package
 
 ## License
