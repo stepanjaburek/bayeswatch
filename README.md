@@ -53,10 +53,12 @@ d <- list(
 m.1 <- ulam_bayeswatch(
     alist(
         publications ~ dpois(lambda),
-        log(lambda) <- a + beta_beer * beer_consumed + beta[department],
-        a ~ dnorm(0, 1),
-        beta_beer ~ dnorm(0, 1),
-        beta[department] ~ dnorm(0, 1)
+        log(lambda) <- alpha + beta_beer * beer_consumed + z[department] * sigma_dept,
+
+        alpha ~ dnorm(0, 1),
+        z[department] ~ dnorm(0, 1),
+        sigma_dept ~ dexp(1), 
+        beta_beer ~ dnorm(0, 0.5)
     ), data=d, chains=4
 )
 precis(m.1, depth=2)
@@ -85,8 +87,8 @@ m.1 <- brm_bayeswatch(
   data = df, 
   family = poisson(),
   prior = c(
-    prior(normal(1, 0.5), class = "Intercept"),
-    prior(normal(0, 0.2), class = "b", coef = "beer_consumed"),
+    prior(normal(1, 1), class = "Intercept"),
+    prior(normal(0, 0.5), class = "b", coef = "beer_consumed"),
     prior(exponential(1), class = "sd", group = "department")
   )
 )
